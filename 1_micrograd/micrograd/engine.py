@@ -1,3 +1,5 @@
+import math
+
 class Value:
     """Stores a single scalar value and its gradient."""
     
@@ -6,7 +8,7 @@ class Value:
         self.grad = 0
 
         # internal variables used for autograd graph construction
-        self._backward = lambda: None
+        self._backward = lambda: None  # for a leaf node there is nothing to do
         self._prev = set(_children)
         self._op = _op  # the op that produced this Value node, for viz, debugging, etc.
 
@@ -34,11 +36,32 @@ class Value:
     
     def __pow__(self, other):
         assert isinstance(other, (int, float)), "only supporting int/float"
-        other = other if isinstance(other, Value) else Value(other)
+        # other = other if isinstance(other, Value) else Value(other)
         out = Value(self.data ** other, (self,), f'**{other}')
 
         def _backward():
             self.grad += (other * self.data ** (other - 1)) * out.grad
+        out._backward = _backward
+
+        return out
+    
+    def exp(self):
+        x = self.data
+        out = Value(math.exp(x), (self,), 'exp')
+
+        def _backward():
+            self.grad += out.data * out.grad
+        out._backward = _backward
+
+        return out
+    
+    def tanh(self):
+        x = self.data
+        tanh = (math.exp(2*x) - 1) / (math.exp(2*x) + 1)
+        out = Value(tanh, (self,), 'tanh')
+
+        def _backward():
+            self.grad = (1 - tanh**2) * out.grad
         out._backward = _backward
 
         return out
